@@ -1,9 +1,25 @@
-var habId = "123045676"; //"HABITICA-ID-IN-QUOTES"
-var habToken = "123456778"; //"HABITICA-TOKEN-IN-QUOTES"
-var webScript = 'https://example.com' //WebApp script after publishing.
-var emailID = "jjbelezos@gmail.com";  //Your emailID
+// below are the minumum adjustments for the script. 
+//its recommmended to alter
 
-var tags = ["school"]
+var habId = "12345667-123456748-1234-123456789123"; //"HABITICA-ID-IN-QUOTES"
+var habToken = "12345678-1234-1234-1234-1234567891234" //"HABITICA-TOKEN-IN-QUOTES"
+
+//tags are indicators of task being part of the attribute! 
+var attributes = ["cleaning","programming","health"]
+
+
+
+
+//----------------------------------------------------------
+//-----------------------------------------------
+var paramsTemplatePut = {
+  "method" : "put",
+  "contentType": "application/json",
+  "headers" : {
+    "x-api-user" : habId, 
+    "x-api-key" : habToken
+  },
+}
 
 var paramsTemplatePost = {
   "method" : "post",
@@ -12,10 +28,7 @@ var paramsTemplatePost = {
     "x-api-user" : habId, 
     "x-api-key" : habToken
   },
-  "encoding":false,
-  "muteHttpExceptions": true,
 }
-
 var paramsTemplateGet = {
   "method" : "get",
   "headers" : {
@@ -24,32 +37,142 @@ var paramsTemplateGet = {
   },
 }  
 
-function loadCustom() {
-  Logger.log("running load custom");
-  var params = paramsTemplateGet;
-  var url = "https://habitica.com/api/v3/tasks/user";
-   var response = UrlFetchApp.fetch("https://habitica.com/api/v3/tasks/user?type=dailys", params);
+function generateCustomHabits(){
+  const urltaskCreator = "https://habitica.com/api/v3/tasks/user";
+    attributes.forEach(function(attributeName){
+      var params = paramsTemplatePost;
+      params["payload"] = Utilities.newBlob(JSON.stringify({ 
+        "text" : attributeName + " level: 0 xp: 0/" + xpCap(0),
+        "type" : "habit",
+        "up" : false,
+        "down" : false,
+    }));
+    UrlFetchApp.fetch(urltaskCreator,params);
+  });
+}
+
+
+
+
+
+
+function updateAllCustom() {
+  //setup by getting all habits and dailies. 
+  //one day will this up with webhook so that it updates after every completion instead of at all once! 
+  const dailyParams = paramsTemplateGet;
+  const dailyUrl = "https://habitica.com/api/v3/tasks/user?type=dailys";
+  const dailyResponse = UrlFetchApp.fetch(dailyUrl, dailyParams);
+  var dailys = JSON.parse(dailyResponse.getContentText()).data;
+
+  const habitParams = paramsTemplateGet;
+  const habitUrl = "https://habitica.com/api/v3/tasks/user?type=habits";
+   const habitResponse = UrlFetchApp.fetch(habitUrl, habitParams);0
+  var habits = JSON.parse(habitResponse.getContentText()).data;
+
   try{
-    var dailys = JSON.parse(response.getContentText()).data;
-    var cleanTasksXp = 0
-    var id = getUserTags();
-    dailys.forEach(function(task){
-      var containsTag = !(typeof(task.tags.find(function(tagName){ return tagId == id })) == 'undefined');
-      if(containsTag){
-        Logger.log(task.text);
-        cleanTasksXp += 1;
-      } 
+   
+    Logger.log(dailys.length);
+    attributes.forEach(function(attributeName){
+      let XpGained = 0;
+      var id = getUserTags(attributeName);
+      dailys.forEach(function(task){
+        var containsTag = !(typeof(task.tags.find(function(tagName){ return tagName == id})) == 'undefined');
+        if(containsTag && task.completed){
+          //check if completed
+          if (task.value > 21.27) {task.value = 21.27}
+          if (task.value < -42.27) {task.value = -42.27}
+          let taskDelta = Math.pow(0.9747,task.value)
+          //Logger.log(task.text + " : " + taskDelta );
+          XpGained += Math.ceil(task.priority * taskDelta * 10);
+        } 
+      });
+      Logger.log(attributeName + ": " + XpGained);
+      updateHabit(attributeName,XpGained,habits);
     });
-    Logger.log("number of clean tasks " + cleanTasksXp)
-  
+
    } catch(e) {
      Logger.log(e.stack);
    }
 }
 
 
-function getUserTags(){
+function getUserTags(tagToLookFor){
   Logger.log("get User tags");
   var response = (JSON.parse(UrlFetchApp.fetch("https://habitica.com/api/v3/tags", paramsTemplateGet))).data
- var id = Logger.log(response.find(function(tag){Logger.log(tag.name); return tag.name == "cleaning";}));
+  var id = response.find(function(tag){ return tag.name == tagToLookFor;}).id;
+
+  return id;
+}
+
+function updateCleaningHabit() {
+   const habitParams = paramsTemplateGet;
+  const habitUrl = "https://habitica.com/api/v3/tasks/user?type=habits";
+   const habitResponse = UrlFetchApp.fetch(habitUrl, habitParams);
+  var habits = JSON.parse(habitResponse.getContentText()).data;
+  updateHabit("cleaning",13,habits);
+}
+
+//todo optimize http calls and extract out habit list! 
+function updateHabit(baseName,xpGained,habits){
+
+   // search for attribute habit! 
+   // the first one that contains the name.
+   //TODO consider updating with better regex
+   const attribute = habits.find(function(habit){
+     return habit.text.search(baseName) != -1;
+   });
+   //Logger.log(attribute);
+  const currentLevel = GetCurrentLevel(attribute.text);
+  //Logger.log(currentLevel);
+  const currentXp = GetCurrentXp(attribute.text)
+  let newXp = xpGained + currentXp;  
+  
+
+  //todo fix this xp part!!
+  //xp should never be above xpCap!!
+
+  var newLevel = currentLevel;
+  if (newXp > xpCap(currentLevel)) {
+    newLevel +=1;
+    newXp -= xpCap(currentLevel);
+     
+  }
+
+  const updateUrl = "https://habitica.com/api/v3/tasks/" + attribute._id;
+  const paramsUpdate = paramsTemplatePut;
+  paramsUpdate["payload"] = Utilities.newBlob(JSON.stringify({"text" : baseName + 
+  " level: " + newLevel + " xp: " + newXp + "/" + xpCap(newLevel), }));
+  
+
+  const responseUpdate = UrlFetchApp.fetch(updateUrl,paramsUpdate);
+
+}
+//alter task text
+  // compute if new level
+  // add new xp to old xp 
+  // 
+
+
+
+function GetCurrentXp(attributeText){
+  const startS = attributeText.indexOf("xp");
+  const endS = attributeText.indexOf("/",startS);
+  const intText = attributeText.slice(startS+3,startS+endS);
+  return parseInt(intText);
+}
+
+function GetCurrentLevel(attributeText) {
+   const startS = attributeText.indexOf("level:");
+  const endS = attributeText.indexOf("xp:");
+  const intText = attributeText.slice(startS+6,endS);
+  Logger.log(intText);
+  return parseInt(intText);
+
+}
+
+
+function xpCap(level){
+  return level*level*0.125+level*10+25;
+
+
 }
