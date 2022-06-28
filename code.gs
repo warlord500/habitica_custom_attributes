@@ -66,16 +66,20 @@ function updateAllCustom() {
 
   const habitParams = paramsTemplateGet;
   const habitUrl = "https://habitica.com/api/v3/tasks/user?type=habits";
-   const habitResponse = UrlFetchApp.fetch(habitUrl, habitParams);0
+   const habitResponse = UrlFetchApp.fetch(habitUrl, habitParams);
   var habits = JSON.parse(habitResponse.getContentText()).data;
+
+  const todoParams = paramsTemplateGet;
+  const todoUrl = "https://habitica.com/api/v3/tasks/user?type=completedTodos";
+  const todoResponse = UrlFetchApp.fetch(todoUrl, todoParams);
+  var todos = JSON.parse(todoResponse.getContentText()).data;
 
   try{
    
-    Logger.log(dailys.length);
     attributes.forEach(function(attributeName){
       let XpGained = 0;
       var id = getUserTags(attributeName);
-      dailys.forEach(function(task){
+    /*  dailys.forEach(function(task){
         var containsTag = !(typeof(task.tags.find(function(tagName){ return tagName == id})) == 'undefined');
         if(containsTag && task.completed){
           //check if completed
@@ -85,9 +89,31 @@ function updateAllCustom() {
           //Logger.log(task.text + " : " + taskDelta );
           XpGained += Math.ceil(task.priority * taskDelta * 10);
         } 
-      });
+      });*/
+      todos.forEach(function(task){
+           const containsTag = !(typeof(task.tags.find(function(tagName){ return tagName == id})) == 'undefined'); 
+           const completedDate =  new Date(task.updatedAt);
+           const todayDate = new Date();
+           if (
+                completedDate.getYear() === todayDate.getYear() &&
+                completedDate.getMonth() === todayDate.getMonth() &&
+                completedDate.getDate() === todayDate.getDate() &&
+                containsTag
+              ) {
+                  let completedCheckList = 1;
+                  task.checklist.forEach(function(item){if(item.completed){completedCheckList += 1;}})
+
+                  if (task.value > 21.27) {task.value = 21.27}
+                  if (task.value < -42.27) {task.value = -42.27}
+                  let taskDelta = Math.pow(0.9747,task.value)
+                  XpGained += Math.ceil(10*task.priority * taskDelta * completedCheckList);
+                  Logger.log("complted item: " + task.text + " checklist count: " + completedCheckList);
+              }   
+        });
+
       Logger.log(attributeName + ": " + XpGained);
       updateHabit(attributeName,XpGained,habits);
+      XpGained = 0;
     });
 
    } catch(e) {
@@ -97,7 +123,6 @@ function updateAllCustom() {
 
 
 function getUserTags(tagToLookFor){
-  Logger.log("get User tags");
   var response = (JSON.parse(UrlFetchApp.fetch("https://habitica.com/api/v3/tags", paramsTemplateGet))).data
   var id = response.find(function(tag){ return tag.name == tagToLookFor;}).id;
 
@@ -172,7 +197,7 @@ function GetCurrentLevel(attributeText) {
 
 
 function xpCap(level){
-  return level*level*0.125+level*10+25;
+  return Math.round((level*level*0.125+level*10+25)/5)*5;
 
 
 }
