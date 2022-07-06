@@ -77,9 +77,9 @@ function updateAllCustom() {
   try{
    
     attributes.forEach(function(attributeName){
-      let XpGained = 0;
+      var XpGained = 0;
       var id = getUserTags(attributeName);
-    /*  dailys.forEach(function(task){
+     dailys.forEach(function(task){
         var containsTag = !(typeof(task.tags.find(function(tagName){ return tagName == id})) == 'undefined');
         if(containsTag && task.completed){
           //check if completed
@@ -89,7 +89,7 @@ function updateAllCustom() {
           //Logger.log(task.text + " : " + taskDelta );
           XpGained += Math.ceil(task.priority * taskDelta * 10);
         } 
-      });*/
+      });
       todos.forEach(function(task){
            const containsTag = !(typeof(task.tags.find(function(tagName){ return tagName == id})) == 'undefined'); 
            const completedDate =  new Date(task.updatedAt);
@@ -157,16 +157,19 @@ function updateHabit(baseName,xpGained,habits){
   //xp should never be above xpCap!!
 
   var newLevel = currentLevel;
+  var gainedNewLevel = false;
   if (newXp > xpCap(currentLevel)) {
     newLevel +=1;
+    gainedNewLevel = true
     newXp -= xpCap(currentLevel);
      
   }
 
   const updateUrl = "https://habitica.com/api/v3/tasks/" + attribute._id;
   const paramsUpdate = paramsTemplatePut;
-  paramsUpdate["payload"] = Utilities.newBlob(JSON.stringify({"text" : baseName + 
-  " level: " + newLevel + " xp: " + newXp + "/" + xpCap(newLevel), }));
+  paramsUpdate["payload"] = Utilities.newBlob(JSON.stringify({
+    "text" : baseName +  " level: " + newLevel + " xp: " + newXp + "/" + xpCap(newLevel), 
+    "notes": "gained " + xpGained + " xp today" +  ((gainedNewLevel) ? " also gained a new level today" : "") }));
   
 
   const responseUpdate = UrlFetchApp.fetch(updateUrl,paramsUpdate);
