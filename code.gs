@@ -95,10 +95,11 @@ function updateAllCustom() {
            const completedDate =  new Date(task.updatedAt);
            const todayDate = new Date();
            if (
-                completedDate.getYear() === todayDate.getYear() &&
-                completedDate.getMonth() === todayDate.getMonth() &&
-                completedDate.getDate() === todayDate.getDate() &&
-                containsTag
+               completedDate.getYear() === todayDate.getYear() &&
+               completedDate.getMonth() === todayDate.getMonth() && (
+               completedDate.getDate() === todayDate.getDate() ||
+               completedDate.getDate() === todayDate.getDate() -1) &
+               containsTag
               ) {
                   let completedCheckList = 1;
                   task.checklist.forEach(function(item){if(item.completed){completedCheckList += 1;}})
