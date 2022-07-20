@@ -41,14 +41,17 @@ function generateCustomHabits(){
   const urltaskCreator = "https://habitica.com/api/v3/tasks/user";
     attributes.forEach(function(attributeName){
       var params = paramsTemplatePost;
+      var tagID = getUserTags(attributeName);
       params["payload"] = Utilities.newBlob(JSON.stringify({ 
         "text" : attributeName + " level: 0 xp: 0/" + xpCap(0),
         "type" : "habit",
         "up" : false,
         "down" : false,
+        "tags" : [tagID,],
     }));
     UrlFetchApp.fetch(urltaskCreator,params);
   });
+}
 }
 
 
