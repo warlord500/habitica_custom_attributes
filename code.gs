@@ -10,7 +10,14 @@ var attributes = ["cleaning","programming","health"]
 
 
 
-//----------------------------------------------------------
+/----------------------------------------------------------
+//optional adjustments
+// enabled by default. 
+// if hit negative side on habit you will lose custom attribute xp. 
+// or if you fail to complete a daily before this runs 
+// replace 1 with 0 if you want to disable negative xp or 
+// replace with higher number for even worse penalties!
+const NEGATIVE_XP = 1;
 //-----------------------------------------------
 var paramsTemplatePut = {
   "method" : "put",
@@ -38,6 +45,7 @@ var paramsTemplateGet = {
 }  
 
 function generateCustomHabits(){
+  
   const urltaskCreator = "https://habitica.com/api/v3/tasks/user";
     attributes.forEach(function(attributeName){
       var params = paramsTemplatePost;
@@ -52,7 +60,6 @@ function generateCustomHabits(){
     UrlFetchApp.fetch(urltaskCreator,params);
   });
 }
-}
 
 
 
@@ -66,31 +73,33 @@ function updateAllCustom() {
   const dailyUrl = "https://habitica.com/api/v3/tasks/user?type=dailys";
   const dailyResponse = UrlFetchApp.fetch(dailyUrl, dailyParams);
   var dailys = JSON.parse(dailyResponse.getContentText()).data;
+  Utilities.sleep(2*1000)
 
   const habitParams = paramsTemplateGet;
   const habitUrl = "https://habitica.com/api/v3/tasks/user?type=habits";
    const habitResponse = UrlFetchApp.fetch(habitUrl, habitParams);
   var habits = JSON.parse(habitResponse.getContentText()).data;
+  Utilities.sleep(2*1000);
 
   const todoParams = paramsTemplateGet;
   const todoUrl = "https://habitica.com/api/v3/tasks/user?type=completedTodos";
   const todoResponse = UrlFetchApp.fetch(todoUrl, todoParams);
   var todos = JSON.parse(todoResponse.getContentText()).data;
+  Utilities.sleep(2*1000);
 
   try{
    
     attributes.forEach(function(attributeName){
       var XpGained = 0;
+      var habitPosXp = 0;
+      var habitNegXp = 0;
       var id = getUserTags(attributeName);
      dailys.forEach(function(task){
-        var containsTag = !(typeof(task.tags.find(function(tagName){ return tagName == id})) == 'undefined');
+        const containsTag = !(typeof(task.tags.find(function(tagName){ return tagName == id})) == 'undefined');
         if(containsTag && task.completed){
-          //check if completed
-          if (task.value > 21.27) {task.value = 21.27}
-          if (task.value < -42.27) {task.value = -42.27}
-          let taskDelta = Math.pow(0.9747,task.value)
+          
           //Logger.log(task.text + " : " + taskDelta );
-          XpGained += Math.ceil(task.priority * taskDelta * 10);
+          XpGained += Math.ceil(task.priority * sanitizeTaskValue(task.value) * 10);
         } 
       });
       todos.forEach(function(task){
@@ -98,25 +107,38 @@ function updateAllCustom() {
            const completedDate =  new Date(task.updatedAt);
            const todayDate = new Date();
            if (
-               completedDate.getYear() === todayDate.getYear() &&
-               completedDate.getMonth() === todayDate.getMonth() && (
-               completedDate.getDate() === todayDate.getDate() ||
-               completedDate.getDate() === todayDate.getDate() -1) &
-               containsTag
+                completedDate.getYear() === todayDate.getYear() &&
+                completedDate.getMonth() === todayDate.getMonth() && (
+                completedDate.getDate() === todayDate.getDate() ||
+                completedDate.getDate() === todayDate.getDate() -1) &&
+                containsTag
               ) {
                   let completedCheckList = 1;
                   task.checklist.forEach(function(item){if(item.completed){completedCheckList += 1;}})
 
-                  if (task.value > 21.27) {task.value = 21.27}
-                  if (task.value < -42.27) {task.value = -42.27}
-                  let taskDelta = Math.pow(0.9747,task.value)
-                  XpGained += Math.ceil(10*task.priority * taskDelta * completedCheckList);
-                  Logger.log("complted item: " + task.text + " checklist count: " + completedCheckList);
+               
+                  XpGained += Math.ceil(10*task.priority * sanitizeTaskValue(task.value) * completedCheckList);
               }   
         });
+        habits.forEach(function(habitTask){
+               const containsTag = !(typeof(habitTask.tags.find(function(tagName){ return tagName == id})) == 'undefined');
+               if(containsTag){ 
+                 
+                 var countThisHabitNow = (habitTask.frequency=="daily");
+                 countThisHabitNow |= (habitTask.frequency == "weekly") &&   (new Date()).getDay() == 0;
+                 countThisHabitNow |= (habitTask.frequency == "monthly") && (new Date()).getDate == 1;
 
-      Logger.log(attributeName + ": " + XpGained);
-      updateHabit(attributeName,XpGained,habits);
+                 if(countThisHabitNow){
+
+                    habitPosXp = Math.ceil(habitTask.counterUp * sanitizeTaskValue(habitTask.value) * 10 * habitTask.priority);
+                    habitNegXp = Math.ceil(habitTask.counterDown * sanitizeTaskValue(habitTask.value) * -10 * habitTask.priority* NEGATIVE_XP);
+                    XpGained += habitPosXp;
+                    XpGained -= habitNegXp;
+                 }
+               }
+        });
+      updateHabit(attributeName,XpGained,habits,habitPosXp,habitNegXp);
+      Utilities.sleep(2*1000);
       XpGained = 0;
     });
 
@@ -142,7 +164,7 @@ function updateCleaningHabit() {
 }
 
 //todo optimize http calls and extract out habit list! 
-function updateHabit(baseName,xpGained,habits){
+function updateHabit(baseName,xpGained,habits,habitPosXp,habitNegXp){
 
    // search for attribute habit! 
    // the first one that contains the name.
@@ -168,22 +190,19 @@ function updateHabit(baseName,xpGained,habits){
     newXp -= xpCap(currentLevel);
      
   }
+  const levelText =  ((gainedNewLevel) ? " also gained a new level today" : "");
+  const habitText = "habit positive  xp: " + habitPosXp + " habit negative xp: " + habitNegXp;
 
   const updateUrl = "https://habitica.com/api/v3/tasks/" + attribute._id;
   const paramsUpdate = paramsTemplatePut;
   paramsUpdate["payload"] = Utilities.newBlob(JSON.stringify({
     "text" : baseName +  " level: " + newLevel + " xp: " + newXp + "/" + xpCap(newLevel), 
-    "notes": "gained " + xpGained + " xp today" +  ((gainedNewLevel) ? " also gained a new level today" : "") }));
+    "notes": "gained " + xpGained + " xp today" + habitText + "\n" + levelText }));
   
 
   const responseUpdate = UrlFetchApp.fetch(updateUrl,paramsUpdate);
 
 }
-//alter task text
-  // compute if new level
-  // add new xp to old xp 
-  // 
-
 
 
 function GetCurrentXp(attributeText){
@@ -202,6 +221,12 @@ function GetCurrentLevel(attributeText) {
 
 }
 
+
+function sanitizeTaskValue(value){
+     if (value > 21.27) {value = 21.27}
+     if (value < -42.27) {value = -42.27}
+     return Math.pow(0.9747,value);
+}
 
 function xpCap(level){
   return Math.round((level*level*0.125+level*10+25)/5)*5;
