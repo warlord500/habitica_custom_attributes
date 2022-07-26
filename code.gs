@@ -8,16 +8,15 @@ var habToken = "12345678-1234-1234-1234-1234567891234" //"HABITICA-TOKEN-IN-QUOT
 var attributes = ["cleaning","programming","health"]
 
 
-
-
-/----------------------------------------------------------
+//----------------------------------------------------------
 //optional adjustments
 // enabled by default. 
 // if hit negative side on habit you will lose custom attribute xp. 
 // or if you fail to complete a daily before this runs 
 // replace 1 with 0 if you want to disable negative xp or 
 // replace with higher number for even worse penalties!
-const NEGATIVE_XP = 1;
+const NEGATIVE_XP = 2;
+
 //-----------------------------------------------
 var paramsTemplatePut = {
   "method" : "put",
@@ -53,17 +52,13 @@ function generateCustomHabits(){
       params["payload"] = Utilities.newBlob(JSON.stringify({ 
         "text" : attributeName + " level: 0 xp: 0/" + xpCap(0),
         "type" : "habit",
-        "up" : false,
-        "down" : false,
+        "up" : true,
+        "down" : true,
         "tags" : [tagID,],
     }));
     UrlFetchApp.fetch(urltaskCreator,params);
   });
 }
-
-
-
-
 
 
 function updateAllCustom() {
@@ -96,10 +91,19 @@ function updateAllCustom() {
       var id = getUserTags(attributeName);
      dailys.forEach(function(task){
         const containsTag = !(typeof(task.tags.find(function(tagName){ return tagName == id})) == 'undefined');
-        if(containsTag && task.completed){
-          
-          //Logger.log(task.text + " : " + taskDelta );
-          XpGained += Math.ceil(task.priority * sanitizeTaskValue(task.value) * 10);
+        if(containsTag){
+          var penaltyOrNot;
+          if(task.completed){
+            //if postive then good neg =bad
+            penaltyOrNot =1;
+
+          } else if(task.isDue && !task.completed) {
+              penaltyOrNot = -NEGATIVE_XP;
+          } else {
+            //task is not completed so doesnt count towards xpGained.
+            penaltyOrNot = 0;
+          }
+          XpGained += Math.ceil(task.priority * sanitizeTaskValue(task.value) * 10*penaltyOrNot);
         } 
       });
       todos.forEach(function(task){
@@ -181,23 +185,29 @@ function updateHabit(baseName,xpGained,habits,habitPosXp,habitNegXp){
 
   //todo fix this xp part!!
   //xp should never be above xpCap!!
-
+  
   var newLevel = currentLevel;
   var gainedNewLevel = false;
-  if (newXp > xpCap(currentLevel)) {
-    newLevel +=1;
-    gainedNewLevel = true
-    newXp -= xpCap(currentLevel);
-     
+  if(currentXp < 0){
+    newLevel -= 1;
+    newXp = 0;
+  } else {
+    if (newXp > xpCap(currentLevel)) {
+      newLevel +=1;
+      gainedNewLevel = true
+      newXp -= xpCap(currentLevel); 
+    }
   }
-  const levelText =  ((gainedNewLevel) ? " also gained a new level today" : "");
+
   const habitText = "habit positive  xp: " + habitPosXp + " habit negative xp: " + habitNegXp;
+  const levelText =  ((gainedNewLevel) ? "\n ### **gained a new level today!!** " : "");
+  const noteSeperator = "";
 
   const updateUrl = "https://habitica.com/api/v3/tasks/" + attribute._id;
   const paramsUpdate = paramsTemplatePut;
   paramsUpdate["payload"] = Utilities.newBlob(JSON.stringify({
     "text" : baseName +  " level: " + newLevel + " xp: " + newXp + "/" + xpCap(newLevel), 
-    "notes": "gained " + xpGained + " xp today" + habitText + "\n" + levelText }));
+    "notes": "gained " + xpGained + " xp today" + habitText + " " + levelText }));
   
 
   const responseUpdate = UrlFetchApp.fetch(updateUrl,paramsUpdate);
