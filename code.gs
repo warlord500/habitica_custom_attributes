@@ -127,22 +127,22 @@ function updateAllCustom() {
         habits.forEach(function(habitTask){
                const containsTag = !(typeof(habitTask.tags.find(function(tagName){ return tagName == id})) == 'undefined');
                if(containsTag){ 
-                 
+                 Logger.log(habitTask.text +" : " + habitTask.frequency)
                  var countThisHabitNow = (habitTask.frequency=="daily");
                  countThisHabitNow |= (habitTask.frequency == "weekly") &&   (new Date()).getDay() == 0;
                  countThisHabitNow |= (habitTask.frequency == "monthly") && (new Date()).getDate == 1;
 
                  if(countThisHabitNow){
 
-                    habitPosXp = Math.ceil(habitTask.counterUp * sanitizeTaskValue(habitTask.value) * 10 * habitTask.priority);
-                    habitNegXp = Math.ceil(habitTask.counterDown * sanitizeTaskValue(habitTask.value) * -10 * habitTask.priority* NEGATIVE_XP);
+                    habitPosXp += Math.ceil(habitTask.counterUp * sanitizeTaskValue(habitTask.value) * 10 * habitTask.priority);
+                    habitNegXp -= Math.ceil(habitTask.counterDown * sanitizeTaskValue(habitTask.value) * -10 * habitTask.priority* NEGATIVE_XP);
                     XpGained += habitPosXp;
                     XpGained -= habitNegXp;
                  }
                }
         });
       updateHabit(attributeName,XpGained,habits,habitPosXp,habitNegXp);
-      Utilities.sleep(2*1000);
+      //Utilities.sleep(2*1000);
       XpGained = 0;
     });
 
