@@ -135,12 +135,13 @@ function updateAllCustom() {
                  if(countThisHabitNow){
 
                     habitPosXp += Math.ceil(habitTask.counterUp * sanitizeTaskValue(habitTask.value) * 10 * habitTask.priority);
-                    habitNegXp -= Math.ceil(habitTask.counterDown * sanitizeTaskValue(habitTask.value) * -10 * habitTask.priority* NEGATIVE_XP);
-                    XpGained += habitPosXp;
-                    XpGained -= habitNegXp;
+                    habitNegXp += Math.ceil(habitTask.counterDown * sanitizeTaskValue(habitTask.value) * 10 * habitTask.priority* NEGATIVE_XP);
+                    
                  }
                }
         });
+        XpGained += habitPosXp;
+        XpGained -= habitNegXp;
       updateHabit(attributeName,XpGained,habits,habitPosXp,habitNegXp);
       //Utilities.sleep(2*1000);
       XpGained = 0;
