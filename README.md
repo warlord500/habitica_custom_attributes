@@ -5,10 +5,16 @@ this is a script that makes custom attributes easier on habitica. it designed to
 
 current the system works like habitica cron system and should only be setup to trigger once a day!! 
 
-currently only accounts for dailies and not completedTodos or habits! 
 
 
 to use put in habitica user id, habitica api token and tags/attributes you want to use for it. 
+in the top constants,  
+run the setup habits  function via script interface. 
+then set a trigger to every day at __ hr 
+right before you would normally cron. 
+for example if your cron is midnight set it to 11pm
+or if your was 3am like mine set it to 2am. 
+
 follow the [Event-Driven (Webhook) Scripts Setup Guide](https://habitica.fandom.com/wiki/Event-Driven_(Webhook)_Scripts_Setup_Guide)
 note you must run generateHabits first than setup a time trigger for updateCustomAll. 
 
@@ -18,8 +24,8 @@ every task tagged with your particular attribute when the code runs will contrib
 plans for the future: 
 
 switch to webhook instead of cron system. 
-support todos! 
-support habits!
+~~support todos! ~~
+~~support habits!~~
 support booster rewards!! 
 better docs evantually! 
 
