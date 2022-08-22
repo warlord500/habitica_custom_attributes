@@ -1,6 +1,6 @@
 // below are the minumum adjustments for the script. 
 //its recommmended to alter
-
+// these can be found  under setting api or https://habitica.com/user/settings/api
 var habId = "12345667-123456748-1234-123456789123"; //"HABITICA-ID-IN-QUOTES"
 var habToken = "12345678-1234-1234-1234-1234567891234" //"HABITICA-TOKEN-IN-QUOTES"
 
@@ -18,12 +18,16 @@ var attributes = ["cleaning","programming","health"]
 const NEGATIVE_XP = 2;
 
 //-----------------------------------------------
+// DONT TOUCH UNDERNEATH HERE
+
+const XCLIENT = "497d1667-d0e0-4748-9dcf-612d74a282ea-5hammer"
 var paramsTemplatePut = {
   "method" : "put",
   "contentType": "application/json",
   "headers" : {
     "x-api-user" : habId, 
-    "x-api-key" : habToken
+    "x-api-key" : habToken,
+    "x-client" : XCLIENT
   },
 }
 
@@ -32,7 +36,8 @@ var paramsTemplatePost = {
   "contentType": "application/json",
   "headers" : {
     "x-api-user" : habId, 
-    "x-api-key" : habToken
+    "x-api-key" : habToken,
+    "x-client" : XCLIENT
   },
 }
 var paramsTemplateGet = {
@@ -40,6 +45,7 @@ var paramsTemplateGet = {
   "headers" : {
     "x-api-user" : habId, 
     "x-api-key" : habToken,
+    "x-client" : XCLIENT
   },
 }  
 
@@ -143,8 +149,8 @@ function updateAllCustom() {
         XpGained += habitPosXp;
         XpGained -= habitNegXp;
       updateHabit(attributeName,XpGained,habits,habitPosXp,habitNegXp);
-      //Utilities.sleep(2*1000);
       XpGained = 0;
+      Utilities.sleep(30*1000);
     });
 
    } catch(e) {
