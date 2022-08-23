@@ -18,7 +18,8 @@ or if your was 3am like mine set it to 2am.
 follow the [Event-Driven (Webhook) Scripts Setup Guide](https://habitica.fandom.com/wiki/Event-Driven_(Webhook)_Scripts_Setup_Guide)
 note you must run generateHabits first than setup a time trigger for updateCustomAll. 
 
-
+once setup the habits will look something like this
+![example habit levels](https://github.com/warlord500/habitica_custom_attributes/blob/main/Capture.PNG)
 every task tagged with your particular attribute when the code runs will contribute to your xp and levels. 
 
 plans for the future: 
