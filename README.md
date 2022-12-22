@@ -24,10 +24,9 @@ every task tagged with your particular attribute when the code runs will contrib
 
 plans for the future: 
 
-switch to webhook instead of cron system. 
-~~support todos! ~~  
-
+switch to webhook instead of cron system.   
+~~support todos!~~  
 ~~support habits!~~  
-support booster rewards!! 
-better docs evantually! 
+support booster rewards!!  
+better docs evantually!  
 
